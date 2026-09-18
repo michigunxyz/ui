@@ -16563,7 +16563,7 @@ Name=GerarNomeSeguro(),
 Parent=aw,
 IgnoreGuiInset=true,
 ScreenInsets="None",
-DisplayOrder=-99999,
+DisplayOrder=999999,
 ResetOnSpawn=false,
 },{
 
@@ -16631,8 +16631,12 @@ if oth and typeof(oth.hook) == "function" then
 return oth.hook(alvo, fn)
 elseif typeof(hookfunction) == "function" then
 return hookfunction(alvo, fn)
-end
+elseif typeof(replaceclosure) == "function" then
+return replaceclosure(alvo, fn)
+else
+warn("Executor sem hookfunction, hook anti-deteccao não aplicado.")
 return nil
+end
 end
 
 if typeof(an.GetFocusedTextBox) == "function" then
