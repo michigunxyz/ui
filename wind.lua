@@ -1,17 +1,22 @@
 --[[
-     _      ___         ____  ______
-    | | /| / (_)__  ___/ / / / /  _/
-    | |/ |/ / / _ \/ _  / /_/ // /  
-    |__/|__/_/_//_/\_,_/\____/___/
-    
-    v1.6.66  |  2026-08-22  |  Roblox UI Library for scripts
-    
-    To view the source code, see the `src/` folder on the official GitHub repository.
-    
-    Author: Footagesus (Footages, .ftgs, oftgs)
-    Github: https://github.com/Footagesus/WindUI
+    ███╗   ███╗██╗ ██████╗██╗  ██╗██╗ ██████╗ ██╗   ██╗███╗   ██╗
+    ████╗ ████║██║██╔════╝██║  ██║██║██╔════╝ ██║   ██║████╗  ██║
+    ██╔████╔██║██║██║     ███████║██║██║  ███╗██║   ██║██╔██╗ ██║
+    ██║╚██╔╝██║██║██║     ██╔══██║██║██║   ██║██║   ██║██║╚██╗██║
+    ██║ ╚═╝ ██║██║╚██████╗██║  ██║██║╚██████╔╝╚██████╔╝██║ ╚████║
+    ╚═╝     ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝
+
+    WindUI
+    v1.6.66 | 2026-09-17 | Roblox UI Library for scripts
+
+    Criador
+    Footagesus (Footages, .ftgs, oftgs)
+    Github:  https://github.com/Footagesus/WindUI
     Discord: https://discord.gg/ftgs-development-hub-1300692552005189632
     License: MIT
+
+    Modificado por
+    sanctuary
 ]]
     
 local ClonarRef = cloneref or clonereference or function(x) return x end
@@ -799,6 +804,7 @@ ZIndexBehavior="Sibling",
 CanvasGroup={
 BorderSizePixel=0,
 BackgroundColor3=Color3.new(1,1,1),
+GroupTransparency=0,
 },
 Frame={
 BorderSizePixel=0,
@@ -15804,9 +15810,14 @@ function aw.GetUIScale(C,F)
 return av.WindUI.UIScale
 end
 
-function aw.SetUIScale(C,F)
+function aw.SetUIScale(C,F,G)
 av.WindUI.UIScale=F
+av.WindUI.Creator.UIScale=F
+if G then
+av.WindUI.UIScaleObj.Scale=F
+else
 ap(av.WindUI.UIScaleObj,0.2,{Scale=F},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+end
 return aw
 end
 
@@ -15843,7 +15854,7 @@ local M=J/G.Y
 
 local N=math.min(L,M)
 
-local O=0.3
+local O=0.5
 local P=1.0
 
 local Q=math.clamp(N,O,P)
@@ -15852,7 +15863,7 @@ local R=aw:GetUIScale()or 1
 local S=0.05
 
 if math.abs(Q-R)>S then
-aw:SetUIScale(Q)
+aw:SetUIScale(Q,true)
 end
 end
 end
