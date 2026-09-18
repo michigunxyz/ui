@@ -16563,7 +16563,7 @@ Name=GerarNomeSeguro(),
 Parent=aw,
 IgnoreGuiInset=true,
 ScreenInsets="None",
-DisplayOrder=999999,
+DisplayOrder=5,
 ResetOnSpawn=false,
 },{
 
@@ -16587,14 +16587,14 @@ Name=GerarNomeSeguro(),
 Parent=aw,
 IgnoreGuiInset=true,
 ResetOnSpawn=false,
-DisplayOrder=1000003,
+DisplayOrder=6,
 })
 aa.DropdownGui=at("ScreenGui",{
 Name=GerarNomeSeguro(),
 Parent=aw,
 IgnoreGuiInset=true,
 ResetOnSpawn=false,
-DisplayOrder=1000010,
+DisplayOrder=7,
 ZIndexBehavior="Global",
 })
 aa.TooltipGui=at("ScreenGui",{
@@ -16602,7 +16602,7 @@ Name=GerarNomeSeguro(),
 Parent=aw,
 IgnoreGuiInset=true,
 ResetOnSpawn=false,
-DisplayOrder=1000020,
+DisplayOrder=8,
 ZIndexBehavior="Global",
 })
 av(aa.ScreenGui)
