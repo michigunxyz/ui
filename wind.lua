@@ -13480,6 +13480,8 @@ local at=ar:Create(ao.Containers[aq],as,{
 AnchorPoint=Vector2.new(0,0),
 })
 at:Play()
+end)
+
 if ao.Tabs[aq].CreateEmptyPage and #ao.Tabs[aq].Elements==0 then
 ao.Tabs[aq]:CreateEmptyPage()
 end
