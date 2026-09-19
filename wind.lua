@@ -1421,22 +1421,12 @@ return
 end
 
 local M=L.Position-F
-local targetX = G.X.Offset + M.X
-local targetY = G.Y.Offset + M.Y
-
-local camera = workspace.CurrentCamera
-if camera and camera.ViewportSize then
-local viewport = camera.ViewportSize
-local objSize = v.AbsoluteSize
-local minX = 10
-local maxX = math.max(10, viewport.X - objSize.X - 10)
-local minY = 10
-local maxY = math.max(10, viewport.Y - objSize.Y - 10)
-targetX = math.clamp(targetX, minX, maxX)
-targetY = math.clamp(targetY, minY, maxY)
-end
-
-v.Position = UDim2.new(G.X.Scale, targetX, G.Y.Scale, targetY)
+v.Position=UDim2.new(
+G.X.Scale,
+G.X.Offset+M.X,
+G.Y.Scale,
+G.Y.Offset+M.Y
+)
 end
 
 for L,M in pairs(x)do
