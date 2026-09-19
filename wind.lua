@@ -353,15 +353,23 @@ pcall(makefolder, f)
 end
 
 local h=f.."/icons.lua"
+local fileContent = nil
 
-if not isfile(h)then
+if isfile and isfile(h) and readfile then
+local ok, content = pcall(readfile, h)
+if ok and type(content) == "string" and #content > 10 then
+fileContent = content
+end
+end
+
+if not fileContent then
 local i,j=pcall(function()
 return game:HttpGet(
 "https://raw.githubusercontent.com/dunnook/icons/refs/heads/main/"..d.."/icons.lua"
 )
 end)
 
-if not i then
+if not i or type(j) ~= "string" or #j < 10 then
 warn("Failed to download icon pack:",d)
 return{
 Spritesheets={},
@@ -369,11 +377,14 @@ Icons={},
 }
 end
 
-writefile(h,j)
+fileContent = j
+if writefile then
+pcall(writefile, h, j)
+end
 end
 
 local i,j=pcall(function()
-return loadstring(readfile(h))()
+return loadstring(fileContent)()
 end)
 
 if not i or type(j)~="table"then
@@ -386,16 +397,19 @@ end
 
 for l,m in pairs(j.Spritesheets or{})do
 local p=e.."/"..m
+local hasFile = isfile and isfile(p)
 
-if not isfile(p)then
+if not hasFile then
 local r,u=pcall(function()
 return game:HttpGet(
 "https://raw.githubusercontent.com/dunnook/icons/refs/heads/main/"..m
 )
 end)
 
-if r then
-writefile(p,u)
+if r and type(u) == "string" and #u > 10 then
+if writefile then
+pcall(writefile, p, u)
+end
 else
 warn("Failed to download spritesheet:",m)
 end
@@ -417,16 +431,9 @@ IconsType="lucide",
 New=nil,
 IconThemeTag=nil,
 
-Icons=setmetatable({},{
-__index=function(t,k)
-if type(k)=="string"and k~=""and k~="rbxasset"then
-local pack=LoadIconPack(k)
-rawset(t,k,pack)
-return pack
-end
-return nil
-end
-}),
+Icons={
+lucide=LoadIconPack"lucide",
+},
 }
 
 
@@ -498,6 +505,9 @@ end
 
 function d.SetIconsType(e)
 d.IconsType=e
+if not d.Icons[e]and type(e)=="string"and e~=""and e~="rbxasset"then
+d.Icons[e]=LoadIconPack(e)
+end
 end
 
 function d.Init(e,f)
@@ -513,6 +523,10 @@ local h,i=parseIconString(e)
 
 local j=h or f or d.IconsType
 local l=i
+
+if not d.Icons[j]and type(j)=="string"and j~=""and j~="rbxasset"then
+d.Icons[j]=LoadIconPack(j)
+end
 
 local m=d.Icons[j]
 
