@@ -836,10 +836,10 @@ Theme=nil,
 Themes=nil,
 Icons=l,
 Signals={},
-Objects=setmetatable({},{__mode="k"}),
+Objects={},
 LocalizationObjects={},
 UIScale=1,
-FontObjects=setmetatable({},{__mode="k"}),
+FontObjects={},
 Language=string.match(g.SystemLocaleId,"^[a-z]+"),
 Request=http_request or(syn and syn.request)or request,
 DefaultProperties={
@@ -1075,7 +1075,11 @@ end
 
 local HexCache={}
 function p.GetThemeProperty(r,u)
+u=u or p.Theme or(p.Themes and p.Themes.Dark)
 local function getValue(v,x)
+if not x then
+return nil
+end
 local z=x[v]
 
 if z==nil then
