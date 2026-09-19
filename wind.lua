@@ -1482,6 +1482,7 @@ if endConn then
 endConn:Disconnect()
 endConn=nil
 end
+end
 
 for L,M in pairs(x)do
 M.InputBegan:Connect(function(N)
