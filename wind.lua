@@ -13357,7 +13357,11 @@ function ar.Select(aB)
 return ao:SelectTab(ar.Index)
 end
 
-task.spawn(function()
+local function CreateEmptyPage()
+if ar.EmptyPageCreated or not ar.CustomEmptyPage then
+return
+end
+ar.EmptyPageCreated=true
 local aB
 if ar.CustomEmptyPage.Icon then
 aB=
@@ -13378,17 +13382,6 @@ VerticalAlignment="Center",
 HorizontalAlignment="Center",
 FillDirection="Vertical",
 }),
-
-
-
-
-
-
-
-
-
-
-
 aB,
 ar.CustomEmptyPage.Title and al("TextLabel",{
 AutomaticSize="XY",
@@ -13414,16 +13407,14 @@ FontFace=Font.new(ak.Font,Enum.FontWeight.Regular),
 })or nil,
 })
 
-
-
-
-
 local d
 d=ak.AddSignal(ar.UIElements.ContainerFrame.ChildAdded,function()
 b.Visible=false
 d:Disconnect()
 end)
-end)
+end
+
+ar.CreateEmptyPage=CreateEmptyPage
 
 return ar
 end
@@ -13489,7 +13480,9 @@ local at=ar:Create(ao.Containers[aq],as,{
 AnchorPoint=Vector2.new(0,0),
 })
 at:Play()
-end)
+if ao.Tabs[aq].CreateEmptyPage and #ao.Tabs[aq].Elements==0 then
+ao.Tabs[aq]:CreateEmptyPage()
+end
 
 ao.OnChangeFunc(aq)
 end
