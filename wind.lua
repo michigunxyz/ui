@@ -27,11 +27,6 @@ local function GetAsset(RbxAssetId)
 		return cached
 	end
 
-	if type(RbxAssetId) == "string" and RbxAssetId:match("^https?://") then
-		AssetCache[RbxAssetId] = RbxAssetId
-		return RbxAssetId
-	end
-
 	local CustomAssetLoader = getcustomasset or getsynasset or (syn and syn.getcustomasset)
 	if not CustomAssetLoader then
 		AssetCache[RbxAssetId] = RbxAssetId
@@ -444,9 +439,6 @@ lucide=LoadIconPack"lucide",
 
 local function parseIconString(e)
 if type(e)=="string"then
-if e:find("://") then
-return nil,e
-end
 local f=e:find":"
 if f then
 local g=e:sub(1,f-1)
@@ -511,11 +503,9 @@ end
 end
 end
 
-local KnownPacks={lucide=true,solar=true,gravity=true}
-
 function d.SetIconsType(e)
 d.IconsType=e
-if KnownPacks[e]and not d.Icons[e]then
+if not d.Icons[e]and type(e)=="string"and e~=""and e~="rbxasset"then
 d.Icons[e]=LoadIconPack(e)
 end
 end
@@ -534,15 +524,8 @@ local h,i=parseIconString(e)
 local j=h or f or d.IconsType
 local l=i
 
-if KnownPacks[j]and not d.Icons[j]then
+if not d.Icons[j]and type(j)=="string"and j~=""and j~="rbxasset"then
 d.Icons[j]=LoadIconPack(j)
-end
-
-if type(l)=="string"and(l:match"^https?://"or l:match"^rbxasset")then
-return g and{
-l,
-{ImageRectSize=Vector2.new(0,0),ImageRectPosition=Vector2.new(0,0)},
-}or l
 end
 
 local m=d.Icons[j]
@@ -836,10 +819,10 @@ Theme=nil,
 Themes=nil,
 Icons=l,
 Signals={},
-Objects={},
+Objects=setmetatable({},{__mode="k"}),
 LocalizationObjects={},
 UIScale=1,
-FontObjects={},
+FontObjects=setmetatable({},{__mode="k"}),
 Language=string.match(g.SystemLocaleId,"^[a-z]+"),
 Request=http_request or(syn and syn.request)or request,
 DefaultProperties={
@@ -1075,11 +1058,7 @@ end
 
 local HexCache={}
 function p.GetThemeProperty(r,u)
-u=u or p.Theme or(p.Themes and p.Themes.Dark)
 local function getValue(v,x)
-if not x then
-return nil
-end
 local z=x[v]
 
 if z==nil then
@@ -17009,8 +16988,9 @@ end
 
 local b=true
 
-local d=(aA.Theme and aa.Themes[aA.Theme])or aa.Themes.Dark
-aa.Theme=d
+local d=aa.Themes[aA.Theme or"Dark"]
+
+
 as.SetTheme(d)
 
 local f=gethwid or function()
