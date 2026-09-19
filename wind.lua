@@ -11728,6 +11728,7 @@ an.IconThemed,
 "SectionIcon"
 )
 ao.Size=UDim2.new(0,an.IconSize,0,an.IconSize)
+ao.LayoutOrder=1
 end
 end
 
@@ -11735,6 +11736,7 @@ local ap=af("Frame",{
 Size=UDim2.new(0,an.IconSize,0,an.IconSize),
 BackgroundTransparency=1,
 Visible=false,
+LayoutOrder=3,
 },{
 af("ImageLabel",{
 Size=UDim2.new(1,0,1,0),
@@ -11756,6 +11758,7 @@ end
 local aq=af("Frame",{
 Size=UDim2.new(1,0,1,0),
 BackgroundTransparency=1,
+LayoutOrder=2,
 },{
 af("UIListLayout",{
 FillDirection="Vertical",
