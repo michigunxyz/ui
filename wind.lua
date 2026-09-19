@@ -20,9 +20,16 @@
 ]]
     
 local ClonarRef = cloneref or clonereference or function(x) return x end
+local AssetCache = {}
 local function GetAsset(RbxAssetId)
+	local cached = AssetCache[RbxAssetId]
+	if cached then
+		return cached
+	end
+
 	local CustomAssetLoader = getcustomasset or getsynasset or (syn and syn.getcustomasset)
 	if not CustomAssetLoader then
+		AssetCache[RbxAssetId] = RbxAssetId
 		return RbxAssetId
 	end
 
@@ -43,6 +50,7 @@ local function GetAsset(RbxAssetId)
 		if Success and type(Source) == "string" and #Source > 100 then
 			pcall(writefile, FilePath, Source)
 		else
+			AssetCache[RbxAssetId] = RbxAssetId
 			return RbxAssetId
 		end
 	end
@@ -51,7 +59,9 @@ local function GetAsset(RbxAssetId)
 	pcall(function()
 		custom = CustomAssetLoader(FilePath)
 	end)
-	return custom or RbxAssetId
+	local result = custom or RbxAssetId
+	AssetCache[RbxAssetId] = result
+	return result
 end
 
 type ConfigType__DARKLUA_TYPE_a={
@@ -407,11 +417,16 @@ IconsType="lucide",
 New=nil,
 IconThemeTag=nil,
 
-Icons={
-lucide=LoadIconPack"lucide",
-solar=LoadIconPack"solar",
-gravity=LoadIconPack"gravity"
-},
+Icons=setmetatable({},{
+__index=function(t,k)
+if type(k)=="string"and k~=""and k~="rbxasset"then
+local pack=LoadIconPack(k)
+rawset(t,k,pack)
+return pack
+end
+return nil
+end
+}),
 }
 
 
@@ -790,10 +805,10 @@ Theme=nil,
 Themes=nil,
 Icons=l,
 Signals={},
-Objects={},
+Objects=setmetatable({},{__mode="k"}),
 LocalizationObjects={},
 UIScale=1,
-FontObjects={},
+FontObjects=setmetatable({},{__mode="k"}),
 Language=string.match(g.SystemLocaleId,"^[a-z]+"),
 Request=http_request or(syn and syn.request)or request,
 DefaultProperties={
@@ -1000,7 +1015,14 @@ end
 
 
 function p.AddFontObject(r)
-table.insert(p.FontObjects,r)
+p.FontObjects[r]=true
+if typeof(r)=="Instance"then
+pcall(function()
+r.Destroying:Connect(function()
+p.FontObjects[r]=nil
+end)
+end)
+end
 
 r.FontFace=Font.new(
 p.Font,
@@ -1011,11 +1033,16 @@ end
 
 function p.UpdateFont(r)
 p.Font=r
-for u,v in next,p.FontObjects do
+for v in next,p.FontObjects do
+if v and v.Parent then
 v.FontFace=Font.new(r,v.FontFace.Weight,v.FontFace.Style)
+else
+p.FontObjects[v]=nil
+end
 end
 end
 
+local HexCache={}
 function p.GetThemeProperty(r,u)
 local function getValue(v,x)
 local z=x[v]
@@ -1025,7 +1052,12 @@ return nil
 end
 
 if typeof(z)=="string"and string.sub(z,1,1)=="#"then
-return Color3.fromHex(z)
+local c=HexCache[z]
+if not c then
+c=Color3.fromHex(z)
+HexCache[z]=c
+end
+return c
 end
 
 if typeof(z)=="Color3"then
@@ -1098,6 +1130,13 @@ p.Objects[r].Properties[x]=z
 end
 else
 p.Objects[r]={Object=r,Properties=u}
+if typeof(r)=="Instance"then
+pcall(function()
+r.Destroying:Connect(function()
+p.Objects[r]=nil
+end)
+end)
+end
 end
 
 if not v then
@@ -1187,12 +1226,16 @@ end
 
 if r then
 local B=p.Objects[r]
-if B then
+if B and B.Object and B.Object.Parent then
 ApplyTheme(B)
 end
 else
 for B,C in pairs(p.Objects)do
+if C and C.Object and C.Object.Parent then
 ApplyTheme(C)
+else
+p.Objects[B]=nil
+end
 end
 end
 end
@@ -1429,6 +1472,17 @@ G.Y.Offset+M.Y
 )
 end
 
+local moveConn, endConn
+local function disconnectDragEvents()
+if moveConn then
+moveConn:Disconnect()
+moveConn=nil
+end
+if endConn then
+endConn:Disconnect()
+endConn=nil
+end
+
 for L,M in pairs(x)do
 M.InputBegan:Connect(function(N)
 if not J.CanDraggable or C then
@@ -1451,15 +1505,11 @@ B=M
 F=N.Position
 G=v.Position
 
-if z and typeof(z)=="function"then
-z(true,B)
-end
-end
-end)
-end
+disconnectDragEvents()
 
-e.InputChanged:Connect(function(L)
+moveConn=e.InputChanged:Connect(function(L)
 if not C then
+disconnectDragEvents()
 return
 end
 if m.CurrentInput and m.CurrentInput~=A then
@@ -1477,7 +1527,7 @@ end
 end
 end)
 
-e.InputEnded:Connect(function(L)
+endConn=e.InputEnded:Connect(function(L)
 if not C or m.CurrentInput~=A then
 return
 end
@@ -1493,12 +1543,30 @@ m.CurrentInput=nil
 C=false
 H=nil
 B=nil
+disconnectDragEvents()
 
 if z and typeof(z)=="function"then
 z(false,nil)
 end
 end
 end)
+
+if z and typeof(z)=="function"then
+z(true,B)
+end
+end
+end)
+end
+
+if typeof(v)=="Instance"then
+pcall(function()
+v.Destroying:Connect(function()
+disconnectDragEvents()
+C=false
+H=nil
+end)
+end)
+end
 
 function J.Set(L,M)
 J.CanDraggable=M
@@ -3664,7 +3732,9 @@ local ac=ab.New
 
 
 local ad,ae=unpack(a.q())
-local af=Instance.new("Folder",aa(game:GetService"Workspace").CurrentCamera)
+local af=Instance.new("Folder")
+af.Name="WindUI_Acrylic"
+af.Parent=aa(game:GetService"Workspace").CurrentCamera
 
 
 local function createAcrylic()
@@ -3691,6 +3761,7 @@ end
 
 local function createAcrylicBlur(ag)
 local ah={}
+local isVisible=true
 
 ag=ag or 0.001
 local ai={
@@ -3708,6 +3779,9 @@ ai.bottomRight=al+ak
 end
 
 local function render()
+if not isVisible or aj.Transparency>=1 then
+return
+end
 local ak=aa(game:GetService"Workspace").CurrentCamera
 if ak then
 ak=ak.CFrame
@@ -3740,7 +3814,9 @@ local am=ak.AbsoluteSize-Vector2.new(al,al)
 local an=ak.AbsolutePosition+Vector2.new(al/2,al/2)
 
 updatePositions(am,an)
+if isVisible and aj.Transparency<1 then
 task.spawn(render)
+end
 end
 
 local function renderOnChange()
@@ -3752,7 +3828,9 @@ end
 table.insert(ah,ak:GetPropertyChangedSignal"CFrame":Connect(render))
 table.insert(ah,ak:GetPropertyChangedSignal"ViewportSize":Connect(render))
 table.insert(ah,ak:GetPropertyChangedSignal"FieldOfView":Connect(render))
+if isVisible and aj.Transparency<1 then
 task.spawn(render)
+end
 end
 
 aj.Destroying:Connect(function()
@@ -3761,16 +3839,29 @@ pcall(function()
 al:Disconnect()
 end)
 end
+if af then
+pcall(function()
+af:Destroy()
+end)
+end
 end)
 
 renderOnChange()
 
-return onChange,aj
+local setVisibility=function(al)
+isVisible=al and true or false
+aj.Transparency=isVisible and 0.98 or 1
+if isVisible then
+task.spawn(render)
+end
+end
+
+return onChange,aj,setVisibility
 end
 
 return function(ag)
 local ah={}
-local ai,aj=createAcrylicBlur(ag)
+local ai,aj,setVis=createAcrylicBlur(ag)
 
 local ak=ac("Frame",{
 BackgroundTransparency=1,
@@ -3787,12 +3878,13 @@ end)
 
 ah.AddParent=function(al)
 ab.AddSignal(al:GetPropertyChangedSignal"Visible",function()
-
+ah.SetVisibility(al.Visible)
 end)
+ah.SetVisibility(al.Visible)
 end
 
 ah.SetVisibility=function(al)
-aj.Transparency=al and 0.98 or 1
+setVis(al)
 end
 
 ah.Frame=ak
