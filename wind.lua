@@ -27,6 +27,11 @@ local function GetAsset(RbxAssetId)
 		return cached
 	end
 
+	if type(RbxAssetId) == "string" and RbxAssetId:match("^https?://") then
+		AssetCache[RbxAssetId] = RbxAssetId
+		return RbxAssetId
+	end
+
 	local CustomAssetLoader = getcustomasset or getsynasset or (syn and syn.getcustomasset)
 	if not CustomAssetLoader then
 		AssetCache[RbxAssetId] = RbxAssetId
@@ -439,6 +444,9 @@ lucide=LoadIconPack"lucide",
 
 local function parseIconString(e)
 if type(e)=="string"then
+if e:find("://") then
+return nil,e
+end
 local f=e:find":"
 if f then
 local g=e:sub(1,f-1)
@@ -503,9 +511,11 @@ end
 end
 end
 
+local KnownPacks={lucide=true,solar=true,gravity=true}
+
 function d.SetIconsType(e)
 d.IconsType=e
-if not d.Icons[e]and type(e)=="string"and e~=""and e~="rbxasset"then
+if KnownPacks[e]and not d.Icons[e]then
 d.Icons[e]=LoadIconPack(e)
 end
 end
@@ -524,8 +534,15 @@ local h,i=parseIconString(e)
 local j=h or f or d.IconsType
 local l=i
 
-if not d.Icons[j]and type(j)=="string"and j~=""and j~="rbxasset"then
+if KnownPacks[j]and not d.Icons[j]then
 d.Icons[j]=LoadIconPack(j)
+end
+
+if type(l)=="string"and(l:match"^https?://"or l:match"^rbxasset")then
+return g and{
+l,
+{ImageRectSize=Vector2.new(0,0),ImageRectPosition=Vector2.new(0,0)},
+}or l
 end
 
 local m=d.Icons[j]
@@ -4320,35 +4337,185 @@ ElementBackgroundTransparency=0,
 Light={
 Name="Light",
 
-Accent=Color3.fromHex"#efefef",
-Dialog=Color3.fromHex"#f4f4f5",
-Outline=Color3.fromHex"#ffffff",
-Text=Color3.fromHex"#000000",
-Placeholder=Color3.fromHex"#555555",
-Background=Color3.fromHex"#FFFFFF",
-Button=Color3.fromHex"#18181b",
-Icon=Color3.fromHex"#52525b",
-Toggle=Color3.fromHex"#33C759",
-Slider=Color3.fromHex"#0091FF",
-Checkbox=Color3.fromHex"#0091FF",
+Accent=Color3.fromHex"#2563EB",
+Primary=Color3.fromHex"#2563EB",
+Dialog=Color3.fromHex"#FFFFFF",
+DialogBackground=Color3.fromHex"#FFFFFF",
+DialogTitle=Color3.fromHex"#111827",
+DialogContent=Color3.fromHex"#4B5563",
+DialogIcon=Color3.fromHex"#2563EB",
 
-DropdownTabBackground=Color3.fromHex"#bebebe",
-DropdownBackground=Color3.fromHex"#ffffff",
+Outline=Color3.fromHex"#D1D5DB",
+Text=Color3.fromHex"#111827",
+Placeholder=Color3.fromHex"#6B7280",
+Background=Color3.fromHex"#F3F4F6",
+WindowBackground=Color3.fromHex"#F3F4F6",
+WindowShadow=Color3.fromHex"#000000",
+WindowTopbarTitle=Color3.fromHex"#111827",
+WindowTopbarAuthor=Color3.fromHex"#6B7280",
+WindowTopbarIcon=Color3.fromHex"#374151",
+WindowTopbarButtonIcon=Color3.fromHex"#4B5563",
+WindowSearchBarBackground=Color3.fromHex"#FFFFFF",
 
-TabBackground=Color3.fromHex"#ffffff",
-TabBackgroundHover=Color3.fromHex"#f3f3f3",
+Button=Color3.fromHex"#E5E7EB",
+Icon=Color3.fromHex"#374151",
+Toggle=Color3.fromHex"#10B981",
+ToggleBar=Color3.fromHex"#FFFFFF",
+Slider=Color3.fromHex"#2563EB",
+SliderThumb=Color3.fromHex"#FFFFFF",
+SliderIcon=Color3.fromHex"#4B5563",
+SliderIconFrom=Color3.fromHex"#4B5563",
+SliderIconTo=Color3.fromHex"#2563EB",
+Checkbox=Color3.fromHex"#2563EB",
+CheckboxIcon=Color3.fromHex"#FFFFFF",
+CheckboxBorder=Color3.fromHex"#9CA3AF",
+
+DropdownTabBackground=Color3.fromHex"#FFFFFF",
+DropdownBackground=Color3.fromHex"#FFFFFF",
+DropdownTabBorder=Color3.fromHex"#D1D5DB",
+
+TabBackground=Color3.fromHex"#E5E7EB",
+TabBackgroundHover=Color3.fromHex"#D1D5DB",
 TabBackgroundHoverTransparency=0,
-TabBackgroundActive=Color3.fromHex"#efefef",
+TabBackgroundActive=Color3.fromHex"#FFFFFF",
 TabBackgroundActiveTransparency=0,
+TabText=Color3.fromHex"#4B5563",
+TabTextTransparency=0,
+TabTextTransparencyActive=0,
+TabTitle=Color3.fromHex"#111827",
+TabIcon=Color3.fromHex"#374151",
+TabBorder=Color3.fromHex"#D1D5DB",
+TabBorderTransparencyActive=0,
 
-PanelBackground=Color3.fromHex"#efefef",
+PanelBackground=Color3.fromHex"#E5E7EB",
 PanelBackgroundTransparency=0,
 
-LabelBackground=Color3.fromHex"#efefef",
+LabelBackground=Color3.fromHex"#E5E7EB",
 LabelBackgroundTransparency=0,
 
-ElementBackground=Color3.fromHex"#ffffff",
+ElementBackground=Color3.fromHex"#FFFFFF",
 ElementBackgroundTransparency=0,
+ElementBackgroundHover=Color3.fromHex"#F3F4F6",
+ElementTitle=Color3.fromHex"#111827",
+ElementDesc=Color3.fromHex"#6B7280",
+ElementIcon=Color3.fromHex"#374151",
+
+PopupBackground=Color3.fromHex"#FFFFFF",
+PopupTitle=Color3.fromHex"#111827",
+PopupContent=Color3.fromHex"#4B5563",
+PopupIcon=Color3.fromHex"#2563EB",
+
+SectionBox=Color3.fromHex"#FFFFFF",
+SectionBoxBorder=Color3.fromHex"#D1D5DB",
+SectionBoxBackground=Color3.fromHex"#F9FAFB",
+SectionBoxBackgroundTransparency=0,
+SectionBoxBorderTransparency=0,
+SectionIcon=Color3.fromHex"#374151",
+SectionExpandIcon=Color3.fromHex"#6B7280",
+SearchBarBorder=Color3.fromHex"#D1D5DB",
+
+Notification=Color3.fromHex"#FFFFFF",
+Notification2=Color3.fromHex"#F3F4F6",
+NotificationTitle=Color3.fromHex"#111827",
+NotificationContent=Color3.fromHex"#4B5563",
+NotificationBorder=Color3.fromHex"#E5E7EB",
+
+Tooltip=Color3.fromHex"#1F2937",
+TooltipText=Color3.fromHex"#F9FAFB",
+TooltipSecondary=Color3.fromHex"#2563EB",
+TooltipSecondaryText=Color3.fromHex"#FFFFFF",
+},
+
+White={
+Name="White",
+
+Accent=Color3.fromHex"#2563EB",
+Primary=Color3.fromHex"#2563EB",
+Dialog=Color3.fromHex"#FFFFFF",
+DialogBackground=Color3.fromHex"#FFFFFF",
+DialogTitle=Color3.fromHex"#111827",
+DialogContent=Color3.fromHex"#4B5563",
+DialogIcon=Color3.fromHex"#2563EB",
+
+Outline=Color3.fromHex"#D1D5DB",
+Text=Color3.fromHex"#111827",
+Placeholder=Color3.fromHex"#6B7280",
+Background=Color3.fromHex"#F3F4F6",
+WindowBackground=Color3.fromHex"#F3F4F6",
+WindowShadow=Color3.fromHex"#000000",
+WindowTopbarTitle=Color3.fromHex"#111827",
+WindowTopbarAuthor=Color3.fromHex"#6B7280",
+WindowTopbarIcon=Color3.fromHex"#374151",
+WindowTopbarButtonIcon=Color3.fromHex"#4B5563",
+WindowSearchBarBackground=Color3.fromHex"#FFFFFF",
+
+Button=Color3.fromHex"#E5E7EB",
+Icon=Color3.fromHex"#374151",
+Toggle=Color3.fromHex"#10B981",
+ToggleBar=Color3.fromHex"#FFFFFF",
+Slider=Color3.fromHex"#2563EB",
+SliderThumb=Color3.fromHex"#FFFFFF",
+SliderIcon=Color3.fromHex"#4B5563",
+SliderIconFrom=Color3.fromHex"#4B5563",
+SliderIconTo=Color3.fromHex"#2563EB",
+Checkbox=Color3.fromHex"#2563EB",
+CheckboxIcon=Color3.fromHex"#FFFFFF",
+CheckboxBorder=Color3.fromHex"#9CA3AF",
+
+DropdownTabBackground=Color3.fromHex"#FFFFFF",
+DropdownBackground=Color3.fromHex"#FFFFFF",
+DropdownTabBorder=Color3.fromHex"#D1D5DB",
+
+TabBackground=Color3.fromHex"#E5E7EB",
+TabBackgroundHover=Color3.fromHex"#D1D5DB",
+TabBackgroundHoverTransparency=0,
+TabBackgroundActive=Color3.fromHex"#FFFFFF",
+TabBackgroundActiveTransparency=0,
+TabText=Color3.fromHex"#4B5563",
+TabTextTransparency=0,
+TabTextTransparencyActive=0,
+TabTitle=Color3.fromHex"#111827",
+TabIcon=Color3.fromHex"#374151",
+TabBorder=Color3.fromHex"#D1D5DB",
+TabBorderTransparencyActive=0,
+
+PanelBackground=Color3.fromHex"#E5E7EB",
+PanelBackgroundTransparency=0,
+
+LabelBackground=Color3.fromHex"#E5E7EB",
+LabelBackgroundTransparency=0,
+
+ElementBackground=Color3.fromHex"#FFFFFF",
+ElementBackgroundTransparency=0,
+ElementBackgroundHover=Color3.fromHex"#F3F4F6",
+ElementTitle=Color3.fromHex"#111827",
+ElementDesc=Color3.fromHex"#6B7280",
+ElementIcon=Color3.fromHex"#374151",
+
+PopupBackground=Color3.fromHex"#FFFFFF",
+PopupTitle=Color3.fromHex"#111827",
+PopupContent=Color3.fromHex"#4B5563",
+PopupIcon=Color3.fromHex"#2563EB",
+
+SectionBox=Color3.fromHex"#FFFFFF",
+SectionBoxBorder=Color3.fromHex"#D1D5DB",
+SectionBoxBackground=Color3.fromHex"#F9FAFB",
+SectionBoxBackgroundTransparency=0,
+SectionBoxBorderTransparency=0,
+SectionIcon=Color3.fromHex"#374151",
+SectionExpandIcon=Color3.fromHex"#6B7280",
+SearchBarBorder=Color3.fromHex"#D1D5DB",
+
+Notification=Color3.fromHex"#FFFFFF",
+Notification2=Color3.fromHex"#F3F4F6",
+NotificationTitle=Color3.fromHex"#111827",
+NotificationContent=Color3.fromHex"#4B5563",
+NotificationBorder=Color3.fromHex"#E5E7EB",
+
+Tooltip=Color3.fromHex"#1F2937",
+TooltipText=Color3.fromHex"#F9FAFB",
+TooltipSecondary=Color3.fromHex"#2563EB",
+TooltipSecondaryText=Color3.fromHex"#FFFFFF",
 },
 
 Rose={
