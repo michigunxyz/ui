@@ -1442,20 +1442,20 @@ local H
 local J={
 CanDraggable=true,
 }
-local K={}
-local L=false
+local connections={}
+local cleaned=false
 
 local function cleanup()
-if L then
+if cleaned then
 return
 end
-L=true
-for _,connection in next,K do
+cleaned=true
+for _,connection in ipairs(connections) do
 if connection and connection.Connected then
 connection:Disconnect()
 end
 end
-table.clear(K)
+table.clear(connections)
 end
 
 if not x or typeof(x)~="table"then
@@ -1477,7 +1477,7 @@ G.Y.Offset+M.Y
 end
 
 for L,M in pairs(x)do
-table.insert(K,M.InputBegan:Connect(function(N)
+connections[#connections+1]=M.InputBegan:Connect(function(N)
 if not J.CanDraggable or C then
 return
 end
@@ -1502,10 +1502,10 @@ if z and typeof(z)=="function"then
 z(true,B)
 end
 end
-end))
+end)
 end
 
-table.insert(K,e.InputChanged:Connect(function(L)
+connections[#connections+1]=e.InputChanged:Connect(function(L)
 if not C then
 return
 end
@@ -1522,9 +1522,9 @@ if L==H then
 update(L)
 end
 end
-end))
+end)
 
-table.insert(K,e.InputEnded:Connect(function(L)
+connections[#connections+1]=e.InputEnded:Connect(function(L)
 if not C or m.CurrentInput~=A then
 return
 end
@@ -1545,10 +1545,10 @@ if z and typeof(z)=="function"then
 z(false,nil)
 end
 end
-end))
+end)
 
 if v and v.Destroying then
-table.insert(K,v.Destroying:Connect(cleanup))
+connections[#connections+1]=v.Destroying:Connect(cleanup)
 end
 
 function J.Set(L,M)
@@ -14658,7 +14658,7 @@ end
 local d
 local thumbnailCache={}
 if aw.User then
-local function GetUserThumb()local
+local function GetUserThumb()
 local userId=aw.User.Anonymous and 1 or ak.LocalPlayer.UserId
 local cacheKey=tostring(userId)..":HeadShot:420"
 if thumbnailCache[cacheKey]then
