@@ -406,14 +406,25 @@ IconsType="lucide",
 
 New=nil,
 IconThemeTag=nil,
-
-Icons={
-lucide=LoadIconPack"lucide",
-solar=LoadIconPack"solar",
-gravity=LoadIconPack"gravity"
-},
+IconPackCache={},
+Icons={},
 }
 
+local function EnsureIconPack(packName)
+if type(packName)~="string"then
+return nil
+end
+
+if not d.Icons[packName] then
+local pack=d.Icons[packName] or LoadIconPack(packName)
+d.Icons[packName]=pack
+if pack then
+d.IconPackCache[packName]=pack
+end
+end
+
+return d.Icons[packName]
+end
 
 local function parseIconString(e)
 if type(e)=="string"then
@@ -499,7 +510,7 @@ local h,i=parseIconString(e)
 local j=h or f or d.IconsType
 local l=i
 
-local m=d.Icons[j]
+local m=d.Icons[j] or EnsureIconPack(j)
 
 if m and m.Icons and m.Icons[l]then
 local p=m.Icons[l]
@@ -868,6 +879,7 @@ White="#ffffff",
 Grey="#484848",
 },
 ThemeFallbacks=nil,
+ThemeCache={},
 
 
 
@@ -987,6 +999,7 @@ end
 function p.SetTheme(r)
 local u=p.Theme
 p.Theme=r
+p.ThemeCache={}
 p.UpdateTheme(nil,false)
 
 for v,x in next,p.ThemeChangeCallbacks do
@@ -1047,47 +1060,70 @@ end
 return z
 end
 
-local v=getValue(r,u)
+local cacheKey=tostring(r).."::"..tostring(u)
+local cache=p.ThemeCache[cacheKey]
+if cache~=nil then
+return cache
+end
+
+local function resolveThemeMap(themeMap)
+if not themeMap then
+return nil
+end
+
+local v=getValue(r,themeMap)
 if v~=nil then
 if typeof(v)=="string"and string.sub(v,1,1)~="#"then
-local x=p.GetThemeProperty(v,u)
+local x=p.GetThemeProperty(v,themeMap)
 if x~=nil then
+p.ThemeCache[cacheKey]=x
 return x
 end
 else
+p.ThemeCache[cacheKey]=v
 return v
 end
 end
 
-local x=p.ThemeFallbacks[r]
-if x~=nil then
-if typeof(x)=="string"and string.sub(x,1,1)~="#"then
-return p.GetThemeProperty(x,u)
-else
-return getValue(r,{[r]=x})
-end
+return nil
 end
 
-v=getValue(r,p.Themes.Dark)
+local v=resolveThemeMap(u)
 if v~=nil then
-if typeof(v)=="string"and string.sub(v,1,1)~="#"then
-local z=p.GetThemeProperty(v,p.Themes.Dark)
-if z~=nil then
-return z
+return v
 end
+
+local x=p.ThemeFallbacks and p.ThemeFallbacks[r]
+if x~=nil then
+if typeof(x)=="string"and string.sub(x,1,1)~="#"then
+v=p.GetThemeProperty(x,u)
 else
+v=getValue(r,{[r]=x})
+end
+if v~=nil then
+p.ThemeCache[cacheKey]=v
 return v
 end
 end
 
+v=resolveThemeMap(p.Themes and p.Themes.Dark)
+if v~=nil then
+return v
+end
+
 if x~=nil then
 if typeof(x)=="string"and string.sub(x,1,1)~="#"then
-return p.GetThemeProperty(x,p.Themes.Dark)
+v=p.GetThemeProperty(x,p.Themes and p.Themes.Dark)
 else
-return getValue(r,{[r]=x})
+v=getValue(r,{[r]=x})
+end
+if v~=nil then
+p.ThemeCache[cacheKey]=v
+return v
 end
 end
 
+p.ThemeCache[cacheKey]=nil
 return nil
 end
 
