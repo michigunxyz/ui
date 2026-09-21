@@ -20,6 +20,7 @@
 ]]
     
 local ClonarRef = cloneref or clonereference or function(x) return x end
+local DownloadsPendentes = {}
 local function GetAsset(RbxAssetId)
 	local CustomAssetLoader = getcustomasset or getsynasset or (syn and syn.getcustomasset)
 	if not CustomAssetLoader then
@@ -35,16 +36,21 @@ local function GetAsset(RbxAssetId)
 	local FilePath = MainFolder .. "/" .. AssetIdStr .. ".png"
 
 	if isfile and not isfile(FilePath) and writefile then
-		local Success, Source = pcall(function()
-			return game:HttpGet(
-				"https://raw.githubusercontent.com/dunnook/icons/refs/heads/main/WindUI/" .. AssetIdStr
-			)
-		end)
-		if Success and type(Source) == "string" and #Source > 100 then
-			pcall(writefile, FilePath, Source)
-		else
-			return RbxAssetId
+		if not DownloadsPendentes[AssetIdStr] then
+			DownloadsPendentes[AssetIdStr] = true
+			task.spawn(function()
+				local Success, Source = pcall(function()
+					return game:HttpGet(
+						"https://raw.githubusercontent.com/dunnook/icons/refs/heads/main/WindUI/" .. AssetIdStr
+					)
+				end)
+				if Success and type(Source) == "string" and #Source > 100 then
+					pcall(writefile, FilePath, Source)
+				end
+				DownloadsPendentes[AssetIdStr] = nil
+			end)
 		end
+		return RbxAssetId
 	end
 
 	local custom = nil
@@ -1458,7 +1464,7 @@ end
 end)
 end
 
-e.InputChanged:Connect(function(L)
+p.AddSignal(e.InputChanged,function(L)
 if not C then
 return
 end
@@ -1477,7 +1483,7 @@ end
 end
 end)
 
-e.InputEnded:Connect(function(L)
+p.AddSignal(e.InputEnded,function(L)
 if not C or m.CurrentInput~=A then
 return
 end
@@ -2798,11 +2804,20 @@ TextSize=18,
 }),
 })
 
+local hoverTween
 ab.AddSignal(ao.MouseEnter,function()
-ad(ao.Frame,0.047,{ImageTransparency=0.95}):Play()
+if hoverTween then
+hoverTween:Cancel()
+end
+hoverTween=ad(ao.Frame,0.047,{ImageTransparency=0.95})
+hoverTween:Play()
 end)
 ab.AddSignal(ao.MouseLeave,function()
-ad(ao.Frame,0.047,{ImageTransparency=1}):Play()
+if hoverTween then
+hoverTween:Cancel()
+end
+hoverTween=ad(ao.Frame,0.047,{ImageTransparency=1})
+hoverTween:Play()
 end)
 ab.AddSignal(ao.MouseButton1Click,function()
 if aj then
@@ -5834,52 +5849,9 @@ ae(game:GetService"UserInputService")
 
 local af=a.y()
 
-local function Color3ToHSB(ag)
-local ah,ai,aj=ag.R,ag.G,ag.B
-local ak=math.max(ah,ai,aj)
-local al=math.min(ah,ai,aj)
-local am=ak-al
-
-local an=0
-if am~=0 then
-if ak==ah then
-an=(ai-aj)/am%6
-elseif ak==ai then
-an=(aj-ah)/am+2
-else
-an=(ah-ai)/am+4
-end
-an=an*60
-else
-an=0
-end
-
-local ao=(ak==0)and 0 or(am/ak)
-local ap=ak
-
-return{
-h=math.floor(an+0.5),
-s=ao,
-b=ap,
-}
-end
-
-local function GetPerceivedBrightness(ag)
-local ah=ag.R
-local ai=ag.G
-local aj=ag.B
-return 0.299*ah+0.587*ai+0.114*aj
-end
-
-local function GetTextColorForHSB(ag)
-local ah=Color3ToHSB(ag)local
-ai, aj, ak=ah.h, ah.s, ah.b
-if GetPerceivedBrightness(ag)>0.5 then
-return Color3.fromHSV(ai/360,0,0.05)
-else
-return Color3.fromHSV(ai/360,0,0.98)
-end
-end
+local Color3ToHSB=aa.Color3ToHSB
+local GetPerceivedBrightness=aa.GetPerceivedBrightness
+local GetTextColorForHSB=aa.GetTextColorForHSB
 
 return function(ag)
 local ah={
@@ -7422,7 +7394,7 @@ local at=al.Step%1~=0
 
 local function FormatValue(au)
 if at then
-return tonumber(string.format("%.2f",au))
+return math.floor(au*100+0.5)/100
 end
 return math.floor(au+0.5)
 end
@@ -9600,6 +9572,9 @@ end
 table.clear(at)
 table.clear(ap.Tabs)
 
+ap._LastVisibleStart=nil
+ap._LastVisibleEnd=nil
+
 return
 end
 
@@ -9619,6 +9594,12 @@ math.ceil(
 /ay
 )+5
 )
+
+if ap._LastVisibleStart==aA and ap._LastVisibleEnd==aB then
+return
+end
+ap._LastVisibleStart=aA
+ap._LastVisibleEnd=aB
 
 local b=
 aB-aA+1
@@ -9830,6 +9811,9 @@ end
 
 table.clear(at)
 table.clear(ap.Tabs)
+
+ap._LastVisibleStart=nil
+ap._LastVisibleEnd=nil
 end
 
 au:Display()
@@ -9941,6 +9925,8 @@ end
 
 function au.Close(aw)
 ap.Opened=false
+ap._LastVisibleStart=nil
+ap._LastVisibleEnd=nil
 
 al(
 ap.UIElements.Menu,
@@ -11339,22 +11325,25 @@ else
 f,g,h=az.Hue,az.Sat,az.Vib
 end
 
+local currentColor=Color3.fromHSV(f,g,h)
+local currentRGB=ToRGB(currentColor)
+
 az.UIElements.SatVibMap.BackgroundColor3=Color3.fromHSV(f,1,1)
 l.Position=UDim2.new(g,0,1-h,0)
-l.BackgroundColor3=Color3.fromHSV(f,g,h)
-p.BackgroundColor3=Color3.fromHSV(f,g,h)
+l.BackgroundColor3=currentColor
+p.BackgroundColor3=currentColor
 v.BackgroundColor3=Color3.fromHSV(f,1,1)
 v.Position=UDim2.new(0.5,0,f,0)
 
-z.Frame.Frame.TextBox.Text="#"..Color3.fromHSV(f,g,h):ToHex()
-A.Frame.Frame.TextBox.Text=ToRGB(Color3.fromHSV(f,g,h)).R
-B.Frame.Frame.TextBox.Text=ToRGB(Color3.fromHSV(f,g,h)).G
-C.Frame.Frame.TextBox.Text=ToRGB(Color3.fromHSV(f,g,h)).B
+z.Frame.Frame.TextBox.Text="#"..currentColor:ToHex()
+A.Frame.Frame.TextBox.Text=currentRGB.R
+B.Frame.Frame.TextBox.Text=currentRGB.G
+C.Frame.Frame.TextBox.Text=currentRGB.B
 
 if P or aB then
 p.BackgroundTransparency=az.Transparency or P
-M.BackgroundColor3=Color3.fromHSV(f,g,h)
-L.BackgroundColor3=Color3.fromHSV(f,g,h)
+M.BackgroundColor3=currentColor
+L.BackgroundColor3=currentColor
 L.BackgroundTransparency=az.Transparency or P
 L.Position=UDim2.new(0.5,0,1-az.Transparency or P,0)
 F.Frame.Frame.TextBox.Text=az:Round(
@@ -14061,39 +14050,50 @@ local ay=string.lower(aw)
 return string.find(ax,ay,1,true)~=nil
 end
 
+local function LowerCached(aA,aB)
+local b="__lower_"..aB
+local d=aA[b]
+if d==nil then
+d=string.lower(tostring(aA[aB]or""))
+aA[b]=d
+end
+return d
+end
+
 local function Search(av)
 if not av or av==""then
 return{}
 end
 
 local aw={}
-for ax,ay in next,am.Tabs do
-local az=ContainsText(ay.Title or"",av)
-local aA={}
+local ax=string.lower(av)
+for ay,az in next,am.Tabs do
+local aA=string.find(LowerCached(az,"Title"),ax,1,true)~=nil
+local aB={}
 
-for aB,b in next,ay.Elements do
-if b.__type~="Section"then
-local d=ContainsText(b.Title or"",av)
-local f=ContainsText(b.Desc or"",av)
+for b,d in next,az.Elements do
+if d.__type~="Section"then
+local f=string.find(LowerCached(d,"Title"),ax,1,true)~=nil
+local g=string.find(LowerCached(d,"Desc"),ax,1,true)~=nil
 
-if d or f then
-aA[aB]={
-Title=b.Title,
-Desc=b.Desc,
-Original=b,
-__type=b.__type,
-Index=aB,
+if f or g then
+aB[b]={
+Title=d.Title,
+Desc=d.Desc,
+Original=d,
+__type=d.__type,
+Index=b,
 }
 end
 end
 end
 
-if az or next(aA)~=nil then
-aw[ax]={
-Tab=ay,
-Title=ay.Title,
-Icon=ay.Icon,
-Elements=aA,
+if aA or next(aB)~=nil then
+aw[ay]={
+Tab=az,
+Title=az.Title,
+Icon=az.Icon,
+Elements=aB,
 }
 end
 end
@@ -16895,9 +16895,13 @@ local g=f()
 if aA.KeySystem then
 b=false
 
+local keyThread=nil
 local function loadKeysystem()
 ar.new(aA,g,function(h)
 b=h
+if b and keyThread and coroutine.status(keyThread)=="suspended" then
+task.spawn(keyThread)
+end
 end)
 end
 
@@ -16961,9 +16965,16 @@ loadKeysystem()
 end
 end
 
+if not b then
+if coroutine.isyieldable() then
+keyThread=coroutine.running()
+coroutine.yield()
+else
 repeat
 task.wait()
 until b
+end
+end
 end
 
 local h=aB(aA)
