@@ -909,10 +909,12 @@ return v
 end
 
 function p.DisconnectAll()
-for r,u in next,p.Signals do
-local v=table.remove(p.Signals,r)
+for _, v in ipairs(p.Signals) do
+if v and v.Connected then
 v:Disconnect()
 end
+end
+table.clear(p.Signals)
 end
 
 function p.SafeCallback(r,...)
@@ -1419,14 +1421,12 @@ return
 end
 
 local M=L.Position-F
-p.Tween(v,0.02,{
-Position=UDim2.new(
+v.Position=UDim2.new(
 G.X.Scale,
 G.X.Offset+M.X,
 G.Y.Scale,
 G.Y.Offset+M.Y
-),
-}):Play()
+)
 end
 
 for L,M in pairs(x)do
@@ -3914,12 +3914,16 @@ local af
 
 task.wait()
 if ad.UseAcrylic then
+local uis=game:GetService("UserInputService")
+local isMobile=uis and uis.TouchEnabled and not uis.KeyboardEnabled
+if not isMobile then
 af=ab()
 
 af.Frame.Parent=ae.Frame
 ae.Model=af.Model
 ae.AddParent=af.AddParent
 ae.SetVisibility=af.SetVisibility
+end
 end
 
 return ae,af
@@ -7616,7 +7620,7 @@ aA=CalculateValue(al.Value.Min+d*(al.Value.Max-al.Value.Min))
 aA=math.clamp(aA or al.Value.Min or 0,al.Value.Min or 0,al.Value.Max or 100)
 
 if aA~=aq then
-ag(al.UIElements.SliderIcon.Frame,0.05,{Size=UDim2.new(d,0,1,0)}):Play()
+al.UIElements.SliderIcon.Frame.Size=UDim2.new(d,0,1,0)
 al.UIElements.SliderContainer.TextBox.Text=FormatValue(aA)
 if ax then
 ax.TitleFrame.Text=FormatValue(aA)
@@ -7637,7 +7641,7 @@ local g=math.clamp(
 aA=CalculateValue(al.Value.Min+g*(al.Value.Max-al.Value.Min))
 
 if aA~=aq then
-ag(al.UIElements.SliderIcon.Frame,0.05,{Size=UDim2.new(g,0,1,0)}):Play()
+al.UIElements.SliderIcon.Frame.Size=UDim2.new(g,0,1,0)
 al.UIElements.SliderContainer.TextBox.Text=FormatValue(aA)
 if ax then
 ax.TitleFrame.Text=FormatValue(aA)
@@ -13353,7 +13357,11 @@ function ar.Select(aB)
 return ao:SelectTab(ar.Index)
 end
 
-task.spawn(function()
+local function CreateEmptyPage()
+if ar.EmptyPageCreated or not ar.CustomEmptyPage then
+return
+end
+ar.EmptyPageCreated=true
 local aB
 if ar.CustomEmptyPage.Icon then
 aB=
@@ -13374,17 +13382,6 @@ VerticalAlignment="Center",
 HorizontalAlignment="Center",
 FillDirection="Vertical",
 }),
-
-
-
-
-
-
-
-
-
-
-
 aB,
 ar.CustomEmptyPage.Title and al("TextLabel",{
 AutomaticSize="XY",
@@ -13410,16 +13407,14 @@ FontFace=Font.new(ak.Font,Enum.FontWeight.Regular),
 })or nil,
 })
 
-
-
-
-
 local d
 d=ak.AddSignal(ar.UIElements.ContainerFrame.ChildAdded,function()
 b.Visible=false
 d:Disconnect()
 end)
-end)
+end
+
+ar.CreateEmptyPage=CreateEmptyPage
 
 return ar
 end
@@ -13486,6 +13481,10 @@ AnchorPoint=Vector2.new(0,0),
 })
 at:Play()
 end)
+
+if ao.Tabs[aq].CreateEmptyPage and #ao.Tabs[aq].Elements==0 then
+ao.Tabs[aq]:CreateEmptyPage()
+end
 
 ao.OnChangeFunc(aq)
 end
@@ -14151,9 +14150,17 @@ end)
 
 ap:Open()
 
+local searchThread
+
 function ap.Search(av,aw)
 aw=aw or""
 
+if searchThread then
+task.cancel(searchThread)
+searchThread=nil
+end
+
+searchThread=task.delay(0.15,function()
 local ax=Search(aw)
 
 as.Visible=true
@@ -14213,6 +14220,7 @@ else
 as.Visible=false
 at.Frame.Results.Frame.Visible=false
 end
+end)
 end
 
 ai.AddSignal(aq:GetPropertyChangedSignal"Text",function()
