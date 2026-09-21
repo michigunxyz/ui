@@ -514,16 +514,45 @@ local m=d.Icons[j] or EnsureIconPack(j)
 
 if m and m.Icons and m.Icons[l]then
 local p=m.Icons[l]
-local r=m.Spritesheets[p.Spritesheet]
-return{
-getcustomasset(r),
+local q=p and p.Image
+local r=(p and p.Spritesheet and m.Spritesheets and m.Spritesheets[p.Spritesheet]) or q
+
+if r then
+local s=string.find(r,"rbxassetid://")or string.find(r,"http")
+if s then
+return g and{
+getcustomasset(r) or r,
 {
-ImageRectPosition=p.ImageRectPosition,
-ImageRectSize=p.ImageRectSize,
-Parts=p.Parts
+ImageRectPosition=p.ImageRectPosition or Vector2.new(0,0),
+ImageRectSize=p.ImageRectSize or Vector2.new(0,0),
+Parts=p.Parts,
 }
+}or (getcustomasset(r) or r)
+end
+
+if type(r)=="string"then
+return g and{
+r,
+{
+ImageRectPosition=p.ImageRectPosition or Vector2.new(0,0),
+ImageRectSize=p.ImageRectSize or Vector2.new(0,0),
+Parts=p.Parts,
 }
-elseif m and m[l]and string.find(m[l],"rbxassetid://")then
+}or r
+end
+end
+
+if p and p.Image and type(p.Image)=="string"and string.find(p.Image,"rbxassetid://")then
+return g and{
+p.Image,
+{
+ImageRectPosition=p.ImageRectPosition or Vector2.new(0,0),
+ImageRectSize=p.ImageRectSize or Vector2.new(0,0),
+Parts=p.Parts,
+}
+}or p.Image
+end
+elseif m and m[l]and type(m[l])=="string"and string.find(m[l],"rbxassetid://")then
 return g
 and{
 m[l],
