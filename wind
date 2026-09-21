@@ -407,7 +407,11 @@ IconsType="lucide",
 New=nil,
 IconThemeTag=nil,
 IconPackCache={},
-Icons={},
+Icons={
+lucide=LoadIconPack"lucide",
+solar=LoadIconPack"solar",
+gravity=LoadIconPack"gravity"
+},
 }
 
 local function EnsureIconPack(packName)
