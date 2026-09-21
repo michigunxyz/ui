@@ -20,7 +20,12 @@
 ]]
     
 local ClonarRef = cloneref or clonereference or function(x) return x end
+local AssetCache = {}
 local function GetAsset(RbxAssetId)
+    if AssetCache[RbxAssetId] then
+        return AssetCache[RbxAssetId]
+    end
+
 	local CustomAssetLoader = getcustomasset or getsynasset or (syn and syn.getcustomasset)
 	if not CustomAssetLoader then
 		return RbxAssetId
@@ -51,7 +56,8 @@ local function GetAsset(RbxAssetId)
 	pcall(function()
 		custom = CustomAssetLoader(FilePath)
 	end)
-	return custom or RbxAssetId
+    AssetCache[RbxAssetId] = custom or RbxAssetId
+    return AssetCache[RbxAssetId]
 end
 
 type ConfigType__DARKLUA_TYPE_a={
@@ -406,6 +412,7 @@ IconsType="lucide",
 
 New=nil,
 IconThemeTag=nil,
+IconCache={},
 
 Icons={
 lucide=LoadIconPack"lucide",
@@ -494,6 +501,10 @@ end
 
 function d.Icon(e,f,g)
 g=g~=false
+local cacheKey=tostring(f or"").."|"..tostring(e or"").."|"..tostring(g)
+if d.IconCache[cacheKey] then
+	return d.IconCache[cacheKey]
+end
 local h,i=parseIconString(e)
 
 local j=h or f or d.IconsType
@@ -504,7 +515,7 @@ local m=d.Icons[j]
 if m and m.Icons and m.Icons[l]then
 local p=m.Icons[l]
 local r=m.Spritesheets[p.Spritesheet]
-return{
+local result={
 getcustomasset(r),
 {
 ImageRectPosition=p.ImageRectPosition,
@@ -512,20 +523,26 @@ ImageRectSize=p.ImageRectSize,
 Parts=p.Parts
 }
 }
+    d.IconCache[cacheKey]=result
+    return result
 elseif m and m[l]and string.find(m[l],"rbxassetid://")then
-return g
-and{
+local result=g and{
 m[l],
 {ImageRectSize=Vector2.new(0,0),ImageRectPosition=Vector2.new(0,0)},
 }
-or m[l]
+    or m[l]
+    d.IconCache[cacheKey]=result
+    return result
 elseif j=="rbxasset"or(m and m.Icons and not m.Icons[l]and l~="")then
 local p=GetAsset(l)
 if p then
-return g and{
+local result=g and{
 p,
 {ImageRectSize=Vector2.new(0,0),ImageRectPosition=Vector2.new(0,0)},
 }
+    or p
+    d.IconCache[cacheKey]=result
+    return result
 end
 end
 return nil
@@ -909,10 +926,12 @@ return v
 end
 
 function p.DisconnectAll()
-for r,u in next,p.Signals do
-local v=table.remove(p.Signals,r)
+for _, v in ipairs(p.Signals) do
+if v and v.Connected then
 v:Disconnect()
 end
+end
+table.clear(p.Signals)
 end
 
 function p.SafeCallback(r,...)
@@ -1419,18 +1438,16 @@ return
 end
 
 local M=L.Position-F
-p.Tween(v,0.02,{
-Position=UDim2.new(
+v.Position=UDim2.new(
 G.X.Scale,
 G.X.Offset+M.X,
 G.Y.Scale,
 G.Y.Offset+M.Y
-),
-}):Play()
+)
 end
 
 for L,M in pairs(x)do
-M.InputBegan:Connect(function(N)
+p.AddSignal(M.InputBegan,function(N)
 if not J.CanDraggable or C then
 return
 end
@@ -1458,7 +1475,7 @@ end
 end)
 end
 
-e.InputChanged:Connect(function(L)
+p.AddSignal(e.InputChanged,function(L)
 if not C then
 return
 end
@@ -1477,7 +1494,7 @@ end
 end
 end)
 
-e.InputEnded:Connect(function(L)
+p.AddSignal(e.InputEnded,function(L)
 if not C or m.CurrentInput~=A then
 return
 end
@@ -1525,7 +1542,7 @@ end
 
 function p.Image(v,x,z,A,B,C,F,G)
 A=A or"Temp"
-x=p.SanitizeFilename(x)
+x=p.SanitizeFilename(tostring(x or""))
 
 local H=r("Frame",{
 Size=UDim2.new(0,0,0,0),
@@ -1544,7 +1561,7 @@ CornerRadius=UDim.new(0,z),
 }),
 }),
 })
-if p.Icon(v)then
+if type(v)=="string" and p.Icon(v)then
 H.ImageLabel:Destroy()
 
 local J=l.Image{
@@ -1556,7 +1573,7 @@ Colors={
 },
 }.IconFrame
 J.Parent=H
-elseif string.find(v,"http")and not string.find(v,"roblox.com")then
+elseif type(v)=="string" and string.find(v,"http",1,true)and not string.find(v,"roblox.com",1,true)then
 local J="WindUI/"..A.."/assets/."..B.."-"..x..".png"
 local L,M=pcall(function()
 task.spawn(function()
@@ -3914,12 +3931,16 @@ local af
 
 task.wait()
 if ad.UseAcrylic then
+local uis=game:GetService("UserInputService")
+local isMobile=uis and uis.TouchEnabled and not uis.KeyboardEnabled
+if not isMobile then
 af=ab()
 
 af.Frame.Parent=ae.Frame
 ae.Model=af.Model
 ae.AddParent=af.AddParent
 ae.SetVisibility=af.SetVisibility
+end
 end
 
 return ae,af
@@ -7366,8 +7387,6 @@ local ag=ae.Tween
 
 local ah={}
 
-local ai=false
-
 function ah.New(aj,ak)
 local al={
 __type="Slider",
@@ -7389,6 +7408,7 @@ TextBoxWidth=ak.Window.NewElements and 40 or 30,
 ThumbSize=13,
 IconSize=26,
 }
+local ai=false
 if al.Icons=={}then
 al.Icons={
 From="sfsymbols:sunMinFill",
@@ -7616,7 +7636,7 @@ aA=CalculateValue(al.Value.Min+d*(al.Value.Max-al.Value.Min))
 aA=math.clamp(aA or al.Value.Min or 0,al.Value.Min or 0,al.Value.Max or 100)
 
 if aA~=aq then
-ag(al.UIElements.SliderIcon.Frame,0.05,{Size=UDim2.new(d,0,1,0)}):Play()
+al.UIElements.SliderIcon.Frame.Size=UDim2.new(d,0,1,0)
 al.UIElements.SliderContainer.TextBox.Text=FormatValue(aA)
 if ax then
 ax.TitleFrame.Text=FormatValue(aA)
@@ -7637,7 +7657,7 @@ local g=math.clamp(
 aA=CalculateValue(al.Value.Min+g*(al.Value.Max-al.Value.Min))
 
 if aA~=aq then
-ag(al.UIElements.SliderIcon.Frame,0.05,{Size=UDim2.new(g,0,1,0)}):Play()
+al.UIElements.SliderIcon.Frame.Size=UDim2.new(g,0,1,0)
 al.UIElements.SliderContainer.TextBox.Text=FormatValue(aA)
 if ax then
 ax.TitleFrame.Text=FormatValue(aA)
@@ -9752,6 +9772,7 @@ end
 
 ap.Values=
 ax or{}
+am.SearchCache={}
 
 if ap.Multi
 and typeof(ap.Value)=="string"
@@ -13353,7 +13374,11 @@ function ar.Select(aB)
 return ao:SelectTab(ar.Index)
 end
 
-task.spawn(function()
+local function CreateEmptyPage()
+if ar.EmptyPageCreated or not ar.CustomEmptyPage then
+return
+end
+ar.EmptyPageCreated=true
 local aB
 if ar.CustomEmptyPage.Icon then
 aB=
@@ -13374,17 +13399,6 @@ VerticalAlignment="Center",
 HorizontalAlignment="Center",
 FillDirection="Vertical",
 }),
-
-
-
-
-
-
-
-
-
-
-
 aB,
 ar.CustomEmptyPage.Title and al("TextLabel",{
 AutomaticSize="XY",
@@ -13410,16 +13424,14 @@ FontFace=Font.new(ak.Font,Enum.FontWeight.Regular),
 })or nil,
 })
 
-
-
-
-
 local d
 d=ak.AddSignal(ar.UIElements.ContainerFrame.ChildAdded,function()
 b.Visible=false
 d:Disconnect()
 end)
-end)
+end
+
+ar.CreateEmptyPage=CreateEmptyPage
 
 return ar
 end
@@ -13485,7 +13497,9 @@ local at=ar:Create(ao.Containers[aq],as,{
 AnchorPoint=Vector2.new(0,0),
 })
 at:Play()
-end)
+if ao.Tabs[aq].CreateEmptyPage and #ao.Tabs[aq].Elements==0 then
+ao.Tabs[aq]:CreateEmptyPage()
+end
 
 ao.OnChangeFunc(aq)
 end
@@ -14063,9 +14077,14 @@ return string.find(ax,ay,1,true)~=nil
 end
 
 local function Search(av)
+av=string.lower(tostring(av or""))
 if not av or av==""then
 return{}
 end
+    local cached=am.SearchCache and am.SearchCache[av]
+    if cached then
+        return cached
+    end
 
 local aw={}
 for ax,ay in next,am.Tabs do
@@ -14098,6 +14117,8 @@ Elements=aA,
 }
 end
 end
+am.SearchCache=am.SearchCache or{}
+am.SearchCache[av]=aw
 return aw
 end
 
@@ -14151,9 +14172,17 @@ end)
 
 ap:Open()
 
+local searchThread
+
 function ap.Search(av,aw)
 aw=aw or""
 
+if searchThread then
+task.cancel(searchThread)
+searchThread=nil
+end
+
+searchThread=task.delay(0.15,function()
 local ax=Search(aw)
 
 as.Visible=true
@@ -14213,6 +14242,7 @@ else
 as.Visible=false
 at.Frame.Results.Frame.Visible=false
 end
+end)
 end
 
 ai.AddSignal(aq:GetPropertyChangedSignal"Text",function()
@@ -14258,7 +14288,7 @@ Title=av.Title or"UI Library",
 Author=av.Author,
 Icon=av.Icon,
 IconSize=av.IconSize or 22,
-IconThemed=av.IconThemed,
+)-3
 IconRadius=av.IconRadius or 0,
 Folder=av.Folder,
 Resizable=av.Resizable~=false,
@@ -14344,7 +14374,7 @@ ax.Y.Scale,
 math.clamp(ax.Y.Offset,aw.MinSize.Y,aw.MaxSize.Y)
 )
 
-if aw.Topbar=={}then
+if type(aw.Topbar)~="table"or next(aw.Topbar)==nil then
 aw.Topbar={Height=52,ButtonsType="Default"}
 end
 
@@ -15423,7 +15453,7 @@ an.Icon"maximize"
 
 aw:CreateTopbarButton(
 "Fullscreen",
-aw.Topbar.ButtonsType=="Mac"and GetAsset"rbxassetid://127426072704909"or"maximize",
+)+3
 function()
 aw:ToggleFullscreen()
 end,
@@ -16712,7 +16742,7 @@ aa.TooltipGui.Parent=paiSeguro
 av(aa.TooltipGui)
 end
 end
-math.clamp(aa.TransparencyValue,0,1)
+aa.TransparencyValue=math.clamp(aa.TransparencyValue,0,1)
 
 local ay=aa.NotificationModule.Init(aa.NotificationGui)
 
