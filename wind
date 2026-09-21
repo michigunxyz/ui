@@ -406,29 +406,13 @@ IconsType="lucide",
 
 New=nil,
 IconThemeTag=nil,
-IconPackCache={},
+
 Icons={
 lucide=LoadIconPack"lucide",
 solar=LoadIconPack"solar",
 gravity=LoadIconPack"gravity"
 },
 }
-
-local function EnsureIconPack(packName)
-if type(packName)~="string"then
-return nil
-end
-
-if not d.Icons[packName] then
-local pack=d.Icons[packName] or LoadIconPack(packName)
-d.Icons[packName]=pack
-if pack then
-d.IconPackCache[packName]=pack
-end
-end
-
-return d.Icons[packName]
-end
 
 local function parseIconString(e)
 if type(e)=="string"then
@@ -508,69 +492,42 @@ return d
 end
 
 function d.Icon(e,f,g)
-	g = g ~= false
-	local h,i = parseIconString(e)
+g=g~=false
+local h,i=parseIconString(e)
 
-	local j = h or f or d.IconsType
-	local l = i
-	local m = d.Icons[j] or EnsureIconPack(j)
+local j=h or f or d.IconsType
+local l=i
 
-	local function ResolveAsset(assetPath)
-		if type(assetPath) ~= "string" then
-			return nil
-		end
+local m=d.Icons[j]
 
-		if string.find(assetPath, "rbxassetid://") or string.find(assetPath, "http") then
-			return assetPath
-		end
-
-		if getcustomasset then
-			local ok, resolved = pcall(function()
-				return getcustomasset(assetPath)
-			end)
-			if ok and resolved then
-				return resolved
-			end
-		end
-
-		return assetPath
-	end
-
-	if m and m.Icons and m.Icons[l] then
-		local p = m.Icons[l]
-		local resolved = ResolveAsset((p and p.Spritesheet and m.Spritesheets and m.Spritesheets[p.Spritesheet]) or (p and p.Image))
-		if resolved then
-			return g and {
-				resolved,
-				{
-					ImageRectPosition = p.ImageRectPosition or Vector2.new(0,0),
-					ImageRectSize = p.ImageRectSize or Vector2.new(0,0),
-					Parts = p.Parts,
-				}
-			} or resolved
-		end
-	end
-
-	if m and m[l] and type(m[l]) == "string" then
-		local resolved = ResolveAsset(m[l])
-		if resolved then
-			return g and {
-				resolved,
-				{ImageRectSize = Vector2.new(0,0), ImageRectPosition = Vector2.new(0,0)},
-			} or resolved
-		end
-	end
-
-	if j == "rbxasset" or (m and m.Icons and not m.Icons[l] and l ~= "") then
-		local p = GetAsset(l)
-		if p then
-			return g and {
-				p,
-				{ImageRectSize = Vector2.new(0,0), ImageRectPosition = Vector2.new(0,0)},
-			} or p
-		end
-	end
-	return nil
+if m and m.Icons and m.Icons[l]then
+local p=m.Icons[l]
+local r=m.Spritesheets[p.Spritesheet]
+return{
+getcustomasset(r),
+{
+ImageRectPosition=p.ImageRectPosition,
+ImageRectSize=p.ImageRectSize,
+Parts=p.Parts
+}
+}
+elseif m and m[l]and string.find(m[l],"rbxassetid://")then
+return g
+and{
+m[l],
+{ImageRectSize=Vector2.new(0,0),ImageRectPosition=Vector2.new(0,0)},
+}
+or m[l]
+elseif j=="rbxasset"or(m and m.Icons and not m.Icons[l]and l~="")then
+local p=GetAsset(l)
+if p then
+return g and{
+p,
+{ImageRectSize=Vector2.new(0,0),ImageRectPosition=Vector2.new(0,0)},
+}
+end
+end
+return nil
 end
 
 function d.GetIcon(e,f)
@@ -1030,7 +987,6 @@ end
 function p.SetTheme(r)
 local u=p.Theme
 p.Theme=r
-p.ThemeCache={}
 p.UpdateTheme(nil,false)
 
 for v,x in next,p.ThemeChangeCallbacks do
@@ -1091,70 +1047,47 @@ end
 return z
 end
 
-local cacheKey=tostring(r).."::"..tostring(u)
-local cache=p.ThemeCache[cacheKey]
-if cache~=nil then
-return cache
-end
-
-local function resolveThemeMap(themeMap)
-if not themeMap then
-return nil
-end
-
-local v=getValue(r,themeMap)
+local v=getValue(r,u)
 if v~=nil then
 if typeof(v)=="string"and string.sub(v,1,1)~="#"then
-local x=p.GetThemeProperty(v,themeMap)
+local x=p.GetThemeProperty(v,u)
 if x~=nil then
-p.ThemeCache[cacheKey]=x
 return x
 end
 else
-p.ThemeCache[cacheKey]=v
 return v
 end
 end
 
-return nil
-end
-
-local v=resolveThemeMap(u)
-if v~=nil then
-return v
-end
-
-local x=p.ThemeFallbacks and p.ThemeFallbacks[r]
+local x=p.ThemeFallbacks[r]
 if x~=nil then
 if typeof(x)=="string"and string.sub(x,1,1)~="#"then
-v=p.GetThemeProperty(x,u)
+return p.GetThemeProperty(x,u)
 else
-v=getValue(r,{[r]=x})
-end
-if v~=nil then
-p.ThemeCache[cacheKey]=v
-return v
+return getValue(r,{[r]=x})
 end
 end
 
-v=resolveThemeMap(p.Themes and p.Themes.Dark)
+v=getValue(r,p.Themes.Dark)
 if v~=nil then
+if typeof(v)=="string"and string.sub(v,1,1)~="#"then
+local z=p.GetThemeProperty(v,p.Themes.Dark)
+if z~=nil then
+return z
+end
+else
 return v
+end
 end
 
 if x~=nil then
 if typeof(x)=="string"and string.sub(x,1,1)~="#"then
-v=p.GetThemeProperty(x,p.Themes and p.Themes.Dark)
+return p.GetThemeProperty(x,p.Themes.Dark)
 else
-v=getValue(r,{[r]=x})
-end
-if v~=nil then
-p.ThemeCache[cacheKey]=v
-return v
+return getValue(r,{[r]=x})
 end
 end
 
-p.ThemeCache[cacheKey]=nil
 return nil
 end
 
