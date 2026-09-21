@@ -508,71 +508,69 @@ return d
 end
 
 function d.Icon(e,f,g)
-g=g~=false
-local h,i=parseIconString(e)
+	g = g ~= false
+	local h,i = parseIconString(e)
 
-local j=h or f or d.IconsType
-local l=i
+	local j = h or f or d.IconsType
+	local l = i
+	local m = d.Icons[j] or EnsureIconPack(j)
 
-local m=d.Icons[j] or EnsureIconPack(j)
+	local function ResolveAsset(assetPath)
+		if type(assetPath) ~= "string" then
+			return nil
+		end
 
-if m and m.Icons and m.Icons[l]then
-local p=m.Icons[l]
-local q=p and p.Image
-local r=(p and p.Spritesheet and m.Spritesheets and m.Spritesheets[p.Spritesheet]) or q
+		if string.find(assetPath, "rbxassetid://") or string.find(assetPath, "http") then
+			return assetPath
+		end
 
-if r then
-local s=string.find(r,"rbxassetid://")or string.find(r,"http")
-if s then
-return g and{
-getcustomasset(r) or r,
-{
-ImageRectPosition=p.ImageRectPosition or Vector2.new(0,0),
-ImageRectSize=p.ImageRectSize or Vector2.new(0,0),
-Parts=p.Parts,
-}
-}or (getcustomasset(r) or r)
-end
+		if getcustomasset then
+			local ok, resolved = pcall(function()
+				return getcustomasset(assetPath)
+			end)
+			if ok and resolved then
+				return resolved
+			end
+		end
 
-if type(r)=="string"then
-return g and{
-r,
-{
-ImageRectPosition=p.ImageRectPosition or Vector2.new(0,0),
-ImageRectSize=p.ImageRectSize or Vector2.new(0,0),
-Parts=p.Parts,
-}
-}or r
-end
-end
+		return assetPath
+	end
 
-if p and p.Image and type(p.Image)=="string"and string.find(p.Image,"rbxassetid://")then
-return g and{
-p.Image,
-{
-ImageRectPosition=p.ImageRectPosition or Vector2.new(0,0),
-ImageRectSize=p.ImageRectSize or Vector2.new(0,0),
-Parts=p.Parts,
-}
-}or p.Image
-end
-elseif m and m[l]and type(m[l])=="string"and string.find(m[l],"rbxassetid://")then
-return g
-and{
-m[l],
-{ImageRectSize=Vector2.new(0,0),ImageRectPosition=Vector2.new(0,0)},
-}
-or m[l]
-elseif j=="rbxasset"or(m and m.Icons and not m.Icons[l]and l~="")then
-local p=GetAsset(l)
-if p then
-return g and{
-p,
-{ImageRectSize=Vector2.new(0,0),ImageRectPosition=Vector2.new(0,0)},
-}
-end
-end
-return nil
+	if m and m.Icons and m.Icons[l] then
+		local p = m.Icons[l]
+		local resolved = ResolveAsset((p and p.Spritesheet and m.Spritesheets and m.Spritesheets[p.Spritesheet]) or (p and p.Image))
+		if resolved then
+			return g and {
+				resolved,
+				{
+					ImageRectPosition = p.ImageRectPosition or Vector2.new(0,0),
+					ImageRectSize = p.ImageRectSize or Vector2.new(0,0),
+					Parts = p.Parts,
+				}
+			} or resolved
+		end
+	end
+
+	if m and m[l] and type(m[l]) == "string" then
+		local resolved = ResolveAsset(m[l])
+		if resolved then
+			return g and {
+				resolved,
+				{ImageRectSize = Vector2.new(0,0), ImageRectPosition = Vector2.new(0,0)},
+			} or resolved
+		end
+	end
+
+	if j == "rbxasset" or (m and m.Icons and not m.Icons[l] and l ~= "") then
+		local p = GetAsset(l)
+		if p then
+			return g and {
+				p,
+				{ImageRectSize = Vector2.new(0,0), ImageRectPosition = Vector2.new(0,0)},
+			} or p
+		end
+	end
+	return nil
 end
 
 function d.GetIcon(e,f)
