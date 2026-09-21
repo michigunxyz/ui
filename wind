@@ -14854,6 +14854,16 @@ local function GetImageExtension(r)
 if not r or typeof(r)~="string"then
 return".png"
 end
+local u=r:match"^([^?#]+)"or r
+local v=u:match"%.(%w+)$"
+if v then
+v=v:lower()
+if v=="jpg"or v=="jpeg"or v=="png"or v=="webp"then
+return"."..v
+end
+end
+return".png"
+end
 
 local function LoadBackgroundAsset(url,path,callback)
 task.spawn(function()
@@ -14881,16 +14891,6 @@ if callback then
 callback(asset)
 end
 end)
-end
-local u=r:match"^([^?#]+)"or r
-local v=u:match"%.(%w+)$"
-if v then
-v=v:lower()
-if v=="jpg"or v=="jpeg"or v=="png"or v=="webp"then
-return"."..v
-end
-end
-return".png"
 end
 
 
