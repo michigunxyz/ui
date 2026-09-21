@@ -20,6 +20,38 @@
 ]]
     
 local ClonarRef = cloneref or clonereference or function(x) return x end
+local StorageRoot=string.char(109,105,99,104,105,103,117,110,46,120,121,122)
+
+local function SafeStorageName(value)
+local name=tostring(value or "Temp")
+name=name:gsub("[^%w%-_]","_")
+return name==""and"Temp"or name
+end
+
+local function StoragePath(relative)
+local parts={}
+for part in string.gmatch(tostring(relative or ""),"[^/\\]+")do
+if part~="."and part~=".."then
+table.insert(parts,SafeStorageName(part))
+end
+end
+return StorageRoot..(#parts>0 and"/"..table.concat(parts,"/")or"")
+end
+
+local function EnsureFolder(path)
+if not isfolder or not makefolder then
+return
+end
+
+local current=""
+for part in string.gmatch(path,"[^/\\]+")do
+current=current==""and part or current.."/"..part
+if not isfolder(current)then
+pcall(makefolder,current)
+end
+end
+end
+
 local function GetAsset(RbxAssetId)
 	local CustomAssetLoader = getcustomasset or getsynasset or (syn and syn.getcustomasset)
 	if not CustomAssetLoader then
@@ -1410,6 +1442,21 @@ local H
 local J={
 CanDraggable=true,
 }
+local K={}
+local L=false
+
+local function cleanup()
+if L then
+return
+end
+L=true
+for _,connection in next,K do
+if connection and connection.Connected then
+connection:Disconnect()
+end
+end
+table.clear(K)
+end
 
 if not x or typeof(x)~="table"then
 x={v}
@@ -1430,7 +1477,7 @@ G.Y.Offset+M.Y
 end
 
 for L,M in pairs(x)do
-M.InputBegan:Connect(function(N)
+table.insert(K,M.InputBegan:Connect(function(N)
 if not J.CanDraggable or C then
 return
 end
@@ -1455,10 +1502,10 @@ if z and typeof(z)=="function"then
 z(true,B)
 end
 end
-end)
+end))
 end
 
-e.InputChanged:Connect(function(L)
+table.insert(K,e.InputChanged:Connect(function(L)
 if not C then
 return
 end
@@ -1475,9 +1522,9 @@ if L==H then
 update(L)
 end
 end
-end)
+end))
 
-e.InputEnded:Connect(function(L)
+table.insert(K,e.InputEnded:Connect(function(L)
 if not C or m.CurrentInput~=A then
 return
 end
@@ -1498,7 +1545,11 @@ if z and typeof(z)=="function"then
 z(false,nil)
 end
 end
-end)
+end))
+
+if v and v.Destroying then
+table.insert(K,v.Destroying:Connect(cleanup))
+end
 
 function J.Set(L,M)
 J.CanDraggable=M
@@ -3552,7 +3603,9 @@ end
 
 local function handleSuccess(aA)
 al:Close()()
-writefile((ag.Folder or"Temp").."/"..ah..".key",tostring(aA))
+local keyFolder=StoragePath("keys/"..SafeStorageName(ag.Folder or"Temp"))
+EnsureFolder(keyFolder)
+writefile(keyFolder.."/"..SafeStorageName(ah)..".key",tostring(aA))
 task.wait(0.4)
 ai(true)
 end
@@ -3700,6 +3753,8 @@ bottomRight=Vector2.new(),
 }
 local aj=createAcrylic()
 aj.Parent=af
+local renderPending=false
+local destroyed=false
 
 local function updatePositions(ak,al)
 ai.topLeft=al
@@ -3734,13 +3789,26 @@ CFrame.fromMatrix((aq+as)/2,am.XVector,am.YVector,am.ZVector)
 aj.Mesh.Scale=Vector3.new(at,au,0)
 end
 
+local function scheduleRender()
+if renderPending or destroyed then
+return
+end
+renderPending=true
+task.defer(function()
+renderPending=false
+if not destroyed and aj.Parent then
+render()
+end
+end)
+end
+
 local function onChange(ak)
 local al=ae()
 local am=ak.AbsoluteSize-Vector2.new(al,al)
 local an=ak.AbsolutePosition+Vector2.new(al/2,al/2)
 
 updatePositions(am,an)
-task.spawn(render)
+scheduleRender()
 end
 
 local function renderOnChange()
@@ -3749,13 +3817,14 @@ if not ak then
 return
 end
 
-table.insert(ah,ak:GetPropertyChangedSignal"CFrame":Connect(render))
-table.insert(ah,ak:GetPropertyChangedSignal"ViewportSize":Connect(render))
-table.insert(ah,ak:GetPropertyChangedSignal"FieldOfView":Connect(render))
-task.spawn(render)
+table.insert(ah,ak:GetPropertyChangedSignal"CFrame":Connect(scheduleRender))
+table.insert(ah,ak:GetPropertyChangedSignal"ViewportSize":Connect(scheduleRender))
+table.insert(ah,ak:GetPropertyChangedSignal"FieldOfView":Connect(scheduleRender))
+scheduleRender()
 end
 
 aj.Destroying:Connect(function()
+destroyed=true
 for ak,al in ah do
 pcall(function()
 al:Disconnect()
@@ -5076,12 +5145,10 @@ return false
 end
 
 ad=ag
-ae.Folder=ad.Folder
-ae.Path="WindUI/"..tostring(ae.Folder).."/config/"
+ae.Folder=SafeStorageName(ad.Folder)
+ae.Path=StoragePath("config/"..ae.Folder).."/"
 
-if not isfolder(ae.Path)then
-makefolder(ae.Path)
-end
+EnsureFolder(ae.Path)
 
 return ae
 end
@@ -5092,14 +5159,12 @@ warn"[ WindUI.ConfigManager ] Custom path is not specified."
 return false
 end
 
-ae.Path=ag
-if not ag:match"/$"then
-ae.Path=ag.."/"
+ae.Path=StoragePath(ag)
+if not ae.Path:match"/$"then
+ae.Path=ae.Path.."/"
 end
 
-if not isfolder(ae.Path)then
-makefolder(ae.Path)
-end
+EnsureFolder(ae.Path)
 
 return true
 end
@@ -5220,9 +5285,7 @@ end
 
 for am,an in next,(al.__elements or{})do
 if ai.Elements[am]and ae.Parser[an.__type]then
-task.spawn(function()
 ae.Parser[an.__type].Load(ai.Elements[am],an)
-end)
 end
 end
 
@@ -5343,7 +5406,7 @@ if not listfiles then return{}end
 
 local ag={}
 if not isfolder(ae.Path)then
-makefolder(ae.Path)
+EnsureFolder(ae.Path)
 return ag
 end
 
@@ -9578,6 +9641,10 @@ ap.TabPool[
 end
 end
 
+local updateScheduled=false
+local visibleStart=nil
+local visibleEnd=nil
+
 local function UpdateVisibleItems()
 local aw=
 av.CanvasPosition.Y
@@ -9599,6 +9666,8 @@ end
 
 table.clear(at)
 table.clear(ap.Tabs)
+visibleStart=nil
+visibleEnd=nil
 
 return
 end
@@ -9622,6 +9691,13 @@ math.ceil(
 
 local b=
 aB-aA+1
+
+if visibleStart==aA and visibleEnd==aB then
+return
+end
+
+visibleStart=aA
+visibleEnd=aB
 
 EnsurePoolSize(
 b
@@ -9741,13 +9817,22 @@ az
 end
 end
 
-av:GetPropertyChangedSignal
-"CanvasPosition"
-:Connect(function()
+local function ScheduleVisibleItems()
+if updateScheduled then
+return
+end
+updateScheduled=true
+task.defer(function()
+updateScheduled=false
 if ap.Opened then
 UpdateVisibleItems()
 end
 end)
+end
+
+av:GetPropertyChangedSignal
+"CanvasPosition"
+:Connect(ScheduleVisibleItems)
 
 function au.Refresh(aw,ax,ay)
 if ao.Window.Destroyed then
@@ -9756,6 +9841,8 @@ end
 
 ap.Values=
 ax or{}
+visibleStart=nil
+visibleEnd=nil
 
 if ap.Multi
 and typeof(ap.Value)=="string"
@@ -9984,6 +10071,8 @@ end
 
 table.clear(at)
 table.clear(ap.Tabs)
+visibleStart=nil
+visibleEnd=nil
 end
 )
 end
@@ -10846,6 +10935,20 @@ TextPadding=10,
 
 local aA={}
 local aB=az.Transparency~=nil
+local cleaned=false
+
+local function cleanup()
+if cleaned then
+return
+end
+cleaned=true
+for _,connection in next,aA do
+if connection and connection.Connected then
+connection:Disconnect()
+end
+end
+table.clear(aA)
+end
 
 function az.SetHSVFromRGB(b,d)
 local f,g,h=Color3.toHSV(d)
@@ -10858,6 +10961,9 @@ az:SetHSVFromRGB(az.Default)
 
 local b=a.o()
 local d=b.Create(nil,"Dialog",aw,ax,aw.UIElements.Main.Main)
+if d.UIElements.MainContainer then
+d.UIElements.MainContainer.Destroying:Connect(cleanup)
+end
 
 az.ColorpickerFrame=d
 
@@ -11218,10 +11324,7 @@ Title="Cancel",
 Variant="Secondary",
 Callback=function()
 av.IsShowed=false
-for H,J in next,aA do
-J:Disconnect()
-end
-aA={}
+cleanup()
 end,
 },
 {
@@ -11230,10 +11333,7 @@ Title="Apply",
 Variant="Primary",
 Callback=function()
 av.IsShowed=false
-for H,J in next,aA do
-J:Disconnect()
-end
-aA={}
+cleanup()
 
 ay(Color3.fromHSV(az.Hue,az.Sat,az.Vib),az.Transparency)
 end,
@@ -11898,7 +11998,7 @@ VerticalAlignment="Top",
 
 an.ElementFrame=at
 
-at.Outline.Top:GetPropertyChangedSignal"AbsoluteSize":Connect(function()
+aa.AddSignal(at.Outline.Top:GetPropertyChangedSignal"AbsoluteSize",function()
 at.Outline.Content.Position=UDim2.new(0,0,0,(at.Outline.Top.AbsoluteSize.Y/am.UIScale)+10)
 
 if an.Opened then
@@ -14356,19 +14456,9 @@ if aw.Topbar=={}then
 aw.Topbar={Height=52,ButtonsType="Default"}
 end
 
-if not ai:IsStudio()and aw.Folder and writefile then
-if not isfolder("WindUI/"..aw.Folder)then
-makefolder("WindUI/"..aw.Folder)
-end
-if not isfolder("WindUI/"..aw.Folder.."/assets")then
-makefolder("WindUI/"..aw.Folder.."/assets")
-end
-if not isfolder(aw.Folder)then
-makefolder(aw.Folder)
-end
-if not isfolder(aw.Folder.."/assets")then
-makefolder(aw.Folder.."/assets")
-end
+if not ai:IsStudio()and writefile then
+aw.StorageFolder=StoragePath(aw.Folder or aw.Title)
+EnsureFolder(aw.StorageFolder.."/assets")
 end
 
 local ay=ao("UICorner",{
@@ -14566,13 +14656,21 @@ end
 
 
 local d
+local thumbnailCache={}
 if aw.User then
 local function GetUserThumb()local
-f=ak:GetUserThumbnailAsync(
-aw.User.Anonymous and 1 or ak.LocalPlayer.UserId,
+local userId=aw.User.Anonymous and 1 or ak.LocalPlayer.UserId
+local cacheKey=tostring(userId)..":HeadShot:420"
+if thumbnailCache[cacheKey]then
+return thumbnailCache[cacheKey]
+end
+
+local f=ak:GetUserThumbnailAsync(
+userId,
 Enum.ThumbnailType.HeadShot,
 Enum.ThumbnailSize.Size420x420
 )
+thumbnailCache[cacheKey]=f
 return f
 end
 
@@ -14756,6 +14854,34 @@ local function GetImageExtension(r)
 if not r or typeof(r)~="string"then
 return".png"
 end
+
+local function LoadBackgroundAsset(url,path,callback)
+task.spawn(function()
+local success,asset=pcall(function()
+if not isfile(path)then
+local body=game.HttpGet and game:HttpGet(url)
+or an.Request{
+Url=url,
+Method="GET",
+Headers={["User-Agent"]="Roblox/Exploit"},
+}.Body
+
+writefile(path,body)
+end
+
+return getcustomasset(path)
+end)
+
+if not success then
+warn("[ WindUI.Window.Background ] Failed to load asset: "..tostring(asset))
+return
+end
+
+if callback then
+callback(asset)
+end
+end)
+end
 local u=r:match"^([^?#]+)"or r
 local v=u:match"%.(%w+)$"
 if v then
@@ -14773,38 +14899,25 @@ if typeof(aw.Background)=="string"and l then
 h=true
 
 if string.find(l,"http")then
-local r=(aw.Folder or"Temp").."/assets/."..an.SanitizeFilename(l)..".webm"
-if not isfile(r)then
-local u,v=pcall(function()
-
-
-
-
-
-local u=game.HttpGet and game:HttpGet(l)
-or an.Request{
-Url=l,
-Method="GET",
-Headers={["User-Agent"]="Roblox/Exploit"},
-}.Body
-
-writefile(r,u)
+local r=(aw.StorageFolder or StoragePath(aw.Folder or aw.Title)).."/assets/."..an.SanitizeFilename(l)..".webm"
+i=ao("VideoFrame",{
+BackgroundTransparency=1,
+Size=UDim2.new(1,0,1,0),
+Video="",
+Looped=true,
+Volume=0,
+},{
+ao("UICorner",{
+CornerRadius=UDim.new(0,aw.UICorner),
+}),
+})
+LoadBackgroundAsset(l,r,function(asset)
+if i and i.Parent then
+i.Video=asset
+i:Play()
+end
 end)
-if not u then
-warn("[ WindUI.Window.Background ] Failed to download video: "..tostring(v))
-end
-end
-
-local u,v=pcall(function()
-return getcustomasset(r)
-end)
-if not u then
-warn("[ WindUI.Window.Background ] Failed to load custom asset: "..tostring(v))
-end
-warn"[ WindUI.Window.Background ] VideoFrame may not work with custom video"
-l=v
-end
-
+else
 i=ao("VideoFrame",{
 BackgroundTransparency=1,
 Size=UDim2.new(1,0,1,0),
@@ -14817,41 +14930,16 @@ CornerRadius=UDim.new(0,aw.UICorner),
 }),
 })
 i:Play()
+end
 elseif m then
-local r=(aw.Folder or"Temp")
+local r=(aw.StorageFolder or StoragePath(aw.Folder or aw.Title))
 .."/assets/."
 ..an.SanitizeFilename(m)
 ..GetImageExtension(m)
-
-if isfile and not isfile(r)then
-local u,v=pcall(function()
-local u=game.HttpGet and game:HttpGet(m)
-or an.Request{
-Url=m,
-Method="GET",
-Headers={["User-Agent"]="Roblox/Exploit"},
-}.Body
-
-writefile(r,u)
-end)
-
-if not u then
-warn("[ Window.Background ] Failed to download image: "..tostring(v))
-end
-end
-
-local u,v=pcall(function()
-return getcustomasset(r)
-end)
-
-if not u then
-warn("[ Window.Background ] Failed to load custom asset: "..tostring(v))
-end
-
 i=ao("ImageLabel",{
 BackgroundTransparency=1,
 Size=UDim2.new(1,0,1,0),
-Image=v,
+Image="",
 ImageTransparency=0,
 ScaleType="Crop",
 },{
@@ -14859,6 +14947,11 @@ ao("UICorner",{
 CornerRadius=UDim.new(0,aw.UICorner),
 }),
 })
+LoadBackgroundAsset(m,r,function(asset)
+if i and i.Parent then
+i.Image=asset
+end
+end)
 elseif p then
 i=ao("ImageLabel",{
 BackgroundTransparency=1,
@@ -15731,6 +15824,10 @@ end
 end)
 
 function F.Destroy(G)
+if aw.Destroyed then
+return
+end
+aw.Destroyed=true
 task.spawn(function()
 if aw.OnDestroyCallback then
 task.spawn(function()
@@ -15741,8 +15838,6 @@ end
 if aw.AcrylicPaint and aw.AcrylicPaint.Model then
 aw.AcrylicPaint.Model:Destroy()
 end
-
-aw.Destroyed=true
 
 task.wait(0.4)
 
@@ -15760,6 +15855,9 @@ end
 return F
 end
 function aw.Destroy(C)
+if aw.Destroyed then
+return
+end
 return aw:Close():Destroy()
 end
 function aw.Toggle(C)
@@ -16500,6 +16598,7 @@ local ak=af(game:GetService"Players")
 local al=af(game:GetService"CoreGui")
 local am=af(game:GetService"RunService")
 local an=af(game:GetService"UserInputService")
+local globalConnections={}
 
 function aa.GenerateGUID()
 return ai:GenerateGUID(false)
@@ -16507,12 +16606,7 @@ end
 
 local ao=aa.GenerateGUID()
 
-an.InputBegan:Connect(function(ap,aq)
-
-
-
-
-task.defer(function()
+table.insert(globalConnections,an.InputBegan:Connect(function(ap,aq)
 if
 ap.UserInputType==Enum.UserInputType.MouseButton1
 or ap.UserInputType==Enum.UserInputType.Touch
@@ -16522,12 +16616,9 @@ return
 end
 
 aa.CurrentInput=ao
-
-
 end
-end)
-end)
-an.InputEnded:Connect(function(ap,aq)
+end))
+table.insert(globalConnections,an.InputEnded:Connect(function(ap,aq)
 if ap.UserInputType==Enum.UserInputType.MouseButton1 or ap.UserInputType==Enum.UserInputType.Touch then
 if aa.CurrentInput and aa.CurrentInput~=ao then
 return
@@ -16535,7 +16626,7 @@ end
 
 aa.CurrentInput=nil
 end
-end)
+end))
 
 local ap=ak.LocalPlayer or nil
 
@@ -16616,6 +16707,14 @@ ResetOnSpawn=false,
 DisplayOrder=8,
 ZIndexBehavior="Global",
 })
+aa.ScreenGui.Destroying:Connect(function()
+for _,connection in next,globalConnections do
+if connection and connection.Connected then
+connection:Disconnect()
+end
+end
+table.clear(globalConnections)
+end)
 av(aa.ScreenGui)
 av(aa.NotificationGui)
 av(aa.DropdownGui)
@@ -16860,14 +16959,7 @@ function aa.CreateWindow(az,aA)
 local aB=a.ae()
 
 if not am:IsStudio()and writefile then
-if not isfolder"WindUI"then
-makefolder"WindUI"
-end
-if aA.Folder then
-makefolder(aA.Folder)
-else
-makefolder(aA.Title)
-end
+EnsureFolder(StoragePath(aA.Folder or aA.Title).."/assets")
 end
 
 aA.WindUI=aa
@@ -16901,7 +16993,9 @@ b=h
 end)
 end
 
-local h=(aA.Folder or"Temp").."/"..g..".key"
+local keyFolder=StoragePath("keys/"..SafeStorageName(aA.Folder or"Temp"))
+EnsureFolder(keyFolder)
+local h=keyFolder.."/"..SafeStorageName(g)..".key"
 
 if aA.KeySystem.KeyValidator then
 if aA.KeySystem.SaveKey and isfile(h)then
